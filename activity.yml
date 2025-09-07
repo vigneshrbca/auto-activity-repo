@@ -1,0 +1,49 @@
+name: Auto Activity Bot
+
+on:
+  schedule:
+    - cron: "0 5 * * *"  # runs daily at 5 AM UTC
+  workflow_dispatch:      # allows manual trigger
+
+jobs:
+  auto-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Update activity log
+        run: |
+          echo "Update at $(date)" >> activity_log.txt
+
+      - name: Commit changes
+        run: |
+          git config --global user.name "your-username"
+          git config --global user.email "your-email@example.com"
+          git add activity_log.txt
+          git commit -m "Auto update on $(date)"
+          git push
+
+  auto-pr:
+    needs: auto-commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Create new branch
+        run: |
+          BRANCH="update-$(date +%Y%m%d%H%M%S)"
+          git checkout -b $BRANCH
+          echo "Pull request generated at $(date)" >> pr_log.txt
+          git add pr_log.txt
+          git commit -m "PR update on $(date)"
+          git push origin $BRANCH
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: ${{ github.ref }}
+          base: main
+          title: "Automated PR - $(date)"
+          body: "This pull request was auto-generated."
